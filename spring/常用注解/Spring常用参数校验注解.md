@@ -126,8 +126,8 @@ public class Order {
     
     // getter 和 setter
 }
+```
 
-<a id="hibernate-validator"></a>
 ## Hibernate Validator
 
 Hibernate Validator 是 Bean Validation 的参考实现，提供了更多的校验注解。
