@@ -339,6 +339,63 @@ public class User {
 
 处理器会生成高效的序列化/反序列化代码，避免运行时反射。
 
+### 4.4 Spring Boot 自动配置过滤
+
+#### 4.4.1 AutoConfiguration 条件判断
+
+Spring Boot 使用注解处理器来实现自动配置类的条件过滤机制，这是其核心功能之一。通过在编译时处理特定注解，Spring Boot 可以高效地决定哪些自动配置类需要被加载，哪些应该被忽略。
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface ConditionalOnClass {
+    /**
+     * 需要存在的类
+     */
+    Class<?>[] value() default {};
+    
+    /**
+     * 需要存在的类的名称（字符串形式）
+     */
+    String[] name() default {};
+}
+```
+
+Spring Boot 使用 `spring-boot-autoconfigure-processor` 注解处理器来扫描和处理这些条件注解：
+
+```java
+@AutoService(Processor.class)
+public class AutoConfigureAnnotationProcessor extends AbstractProcessor {
+    
+    @Override
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        // 处理带有 @EnableAutoConfiguration 注解的配置类
+        // 分析其依赖条件（如 @ConditionalOnClass, @ConditionalOnBean 等）
+        // 生成 META-INF/spring-autoconfigure-metadata.properties 文件
+        
+        return true;
+    }
+}
+```
+
+处理器会生成 `META-INF/spring-autoconfigure-metadata.properties` 文件，包含自动配置类的条件元数据：
+
+```properties
+com.example.JdbcAutoConfiguration.ConditionalOnClass=org.springframework.jdbc.core.JdbcTemplate
+com.example.WebMvcAutoConfiguration.ConditionalOnClass=org.springframework.web.servlet.DispatcherServlet
+```
+
+在应用启动时，Spring Boot 会使用这些元数据快速过滤掉不满足条件的自动配置类，而无需实例化和评估每个配置类，从而显著提高启动性能。这种方式避免了在运行时通过反射检查类路径，大大减少了启动时间和资源消耗。
+
+#### 4.4.2 实现原理
+
+1. **编译时处理**：注解处理器在编译阶段分析所有标记了 `@Configuration` 和条件注解的类
+2. **元数据生成**：生成包含条件信息的属性文件
+3. **启动时过滤**：Spring Boot 在启动时读取元数据文件，在实例化配置类之前快速过滤不满足条件的类
+
+这是一个典型的编译时优化运行时性能的例子，展示了注解处理器在大型框架中的实际应用价值。
+
 ## 5. 注解处理器开发的最佳实践
 
 ### 5.1 错误处理
